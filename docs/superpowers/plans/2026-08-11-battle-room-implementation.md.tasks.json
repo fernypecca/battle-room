@@ -1,0 +1,89 @@
+{
+  "planPath": "docs/superpowers/plans/2026-08-11-battle-room-implementation.md",
+  "tasks": [
+    {
+      "id": 1,
+      "subject": "Task 1: Project scaffold",
+      "status": "pending",
+      "description": "**Goal:** A running Next.js app with the design system's tokens in place and a placeholder page.\n\n**Files:**\n- Create: package.json, tsconfig.json, next.config.ts, postcss.config.mjs, eslint.config.mjs, .gitignore, .env.local.example\n- Create: app/layout.tsx, app/globals.css, app/page.tsx\n\n**Verify:** `npm install && npm run build` → build succeeds\n\n```json:metadata\n{\"files\": [\"package.json\", \"tsconfig.json\", \"next.config.ts\", \"postcss.config.mjs\", \"eslint.config.mjs\", \".gitignore\", \".env.local.example\", \"app/layout.tsx\", \"app/globals.css\", \"app/page.tsx\"], \"verifyCommand\": \"npm install && npm run build\", \"acceptanceCriteria\": [\"npm install completes with no errors\", \"npm run dev serves placeholder heading\", \"npm run build completes with no errors\"]}\n```"
+    },
+    {
+      "id": 2,
+      "subject": "Task 2: Rate limiting and caching",
+      "status": "pending",
+      "blockedBy": [1],
+      "description": "**Goal:** Per-IP daily rate limit (3 runs/day) backed by Upstash when configured, in-memory otherwise.\n\n**Files:**\n- Create: lib/cache.ts, lib/getClientIp.ts, lib/rateLimit.ts\n\n**Verify:** `npx tsc --noEmit` → no errors\n\n```json:metadata\n{\"files\": [\"lib/cache.ts\", \"lib/getClientIp.ts\", \"lib/rateLimit.ts\"], \"verifyCommand\": \"npx tsc --noEmit\", \"acceptanceCriteria\": [\"checkRateLimit throws RateLimitError on 4th daily call\", \"works without Upstash env vars\", \"type-checks cleanly\"]}\n```"
+    },
+    {
+      "id": 3,
+      "subject": "Task 3: Claude wrapper",
+      "status": "pending",
+      "blockedBy": [1],
+      "description": "**Goal:** Single gateway every agent uses to call Claude.\n\n**Files:**\n- Create: lib/claude.ts\n\n**Verify:** `npx tsc --noEmit` → no errors\n\n```json:metadata\n{\"files\": [\"lib/claude.ts\"], \"verifyCommand\": \"npx tsc --noEmit\", \"acceptanceCriteria\": [\"askClaude returns trimmed text\", \"throws if ANTHROPIC_API_KEY unset\", \"respects ANTHROPIC_MODEL override\"]}\n```"
+    },
+    {
+      "id": 4,
+      "subject": "Task 4: Firecrawl wrapper",
+      "status": "pending",
+      "blockedBy": [1],
+      "description": "**Goal:** Scrape public Meta Ad Library and Google News search pages, returning trimmed markdown or null — never throws.\n\n**Files:**\n- Create: lib/firecrawl.ts\n\n**Verify:** `npx tsc --noEmit` → no errors\n\n```json:metadata\n{\"files\": [\"lib/firecrawl.ts\"], \"verifyCommand\": \"npx tsc --noEmit\", \"acceptanceCriteria\": [\"scrapeAdLibrary/scrapeMediaCoverage never throw\", \"results cached 1 hour\", \"markdown capped at 15000 chars\"]}\n```"
+    },
+    {
+      "id": 5,
+      "subject": "Task 5: Agent 1 — Ad Intelligence API route",
+      "status": "pending",
+      "blockedBy": [2, 3, 4],
+      "description": "**Goal:** POST /api/agents/ads scrapes competitor's Meta Ad Library page, returns 3-5 bullet insights or found:false. Checks daily rate limit (pipeline entry point).\n\n**Files:**\n- Create: app/api/agents/ads/route.ts\n\n**Verify:** curl POST with real brand → found:true with bullets; curl with gibberish brand → found:false; 4 curls in a row → 4th returns 429\n\n```json:metadata\n{\"files\": [\"app/api/agents/ads/route.ts\"], \"verifyCommand\": \"curl -s -X POST http://localhost:3000/api/agents/ads -H 'Content-Type: application/json' -d '{\\\"competitorBrand\\\":\\\"Nike\\\"}'\", \"acceptanceCriteria\": [\"400 on missing competitorBrand\", \"429 on 4th daily call\", \"found:true with insights for real brand\", \"found:false without fabrication when no data\"]}\n```"
+    },
+    {
+      "id": 6,
+      "subject": "Task 6: Agent 2 — Battlecard Writer API route",
+      "status": "pending",
+      "blockedBy": [3],
+      "description": "**Goal:** POST /api/agents/battlecard drafts positioning/differentiators/objection-handling battlecard from ad insights + both brand names.\n\n**Files:**\n- Create: app/api/agents/battlecard/route.ts\n\n**Verify:** curl with sample adInsights → battlecard contains ## Positioning, ## Differentiators to lead with, ## Objection handling\n\n```json:metadata\n{\"files\": [\"app/api/agents/battlecard/route.ts\"], \"verifyCommand\": \"curl -s -X POST http://localhost:3000/api/agents/battlecard -H 'Content-Type: application/json' -d '{...}'\", \"acceptanceCriteria\": [\"400 on missing fields\", \"three headed sections present\", \"no invented metrics\", \"explicit no-data note when adInsights null\"]}\n```"
+    },
+    {
+      "id": 7,
+      "subject": "Task 7: Agent 3 — Media Coverage API route",
+      "status": "pending",
+      "blockedBy": [3, 4],
+      "description": "**Goal:** POST /api/agents/media scrapes Google News search for competitor brand, summarizes coverage themes/sentiment.\n\n**Files:**\n- Create: app/api/agents/media/route.ts\n\n**Verify:** curl with real brand → found:true with bullets and sentiment read\n\n```json:metadata\n{\"files\": [\"app/api/agents/media/route.ts\"], \"verifyCommand\": \"curl -s -X POST http://localhost:3000/api/agents/media -H 'Content-Type: application/json' -d '{\\\"competitorBrand\\\":\\\"Nike\\\"}'\", \"acceptanceCriteria\": [\"400 on missing competitorBrand\", \"found:true with summary for real brand\", \"found:false without fabrication when no data\"]}\n```"
+    },
+    {
+      "id": 8,
+      "subject": "Task 8: Agent 4 — Outbound Sequence API route",
+      "status": "pending",
+      "blockedBy": [3],
+      "description": "**Goal:** POST /api/agents/outbound drafts 3-email sequence personalized to target persona's role, referencing battlecard positioning.\n\n**Files:**\n- Create: app/api/agents/outbound/route.ts\n\n**Verify:** curl with sample battlecard+persona → sequence contains Email 1/2/3 blocks\n\n```json:metadata\n{\"files\": [\"app/api/agents/outbound/route.ts\"], \"verifyCommand\": \"curl -s -X POST http://localhost:3000/api/agents/outbound -H 'Content-Type: application/json' -d '{...}'\", \"acceptanceCriteria\": [\"400 on missing fields\", \"3 email blocks present\", \"no invented recipient name\"]}\n```"
+    },
+    {
+      "id": 9,
+      "subject": "Task 9: AgentCard component",
+      "status": "pending",
+      "blockedBy": [1],
+      "description": "**Goal:** Visual unit of the pipeline — icon/index, name, status, expandable result or retry button.\n\n**Files:**\n- Create: components/AgentCard.tsx\n\n**Verify:** `npx tsc --noEmit` → no errors (visual verification in Task 11)\n\n```json:metadata\n{\"files\": [\"components/AgentCard.tsx\"], \"verifyCommand\": \"npx tsc --noEmit\", \"acceptanceCriteria\": [\"5 distinct visual states render\", \"markdown-lite formatting for done state\", \"type-checks cleanly\"]}\n```"
+    },
+    {
+      "id": 10,
+      "subject": "Task 10: PipelineForm component",
+      "status": "pending",
+      "blockedBy": [1],
+      "description": "**Goal:** 3-field input form (your brand, competitor brand, target persona) that kicks off the pipeline.\n\n**Files:**\n- Create: components/PipelineForm.tsx\n\n**Verify:** `npx tsc --noEmit` → no errors\n\n```json:metadata\n{\"files\": [\"components/PipelineForm.tsx\"], \"verifyCommand\": \"npx tsc --noEmit\", \"acceptanceCriteria\": [\"submit disabled until all fields filled\", \"inputs disabled while running\", \"onSubmit receives trimmed values\"]}\n```"
+    },
+    {
+      "id": 11,
+      "subject": "Task 11: PipelineRunner orchestration + wire into page",
+      "status": "pending",
+      "blockedBy": [5, 6, 7, 8, 9, 10],
+      "description": "**Goal:** Sequentially call all 4 agent routes updating card state; per-agent retry without restarting pipeline; rate-limit message distinct from per-agent error. Replace placeholder app/page.tsx.\n\n**Files:**\n- Create: components/PipelineRunner.tsx\n- Modify: app/page.tsx\n\n**Verify:** Manual browser test — happy path (real brand, all 4 cards complete), empty-data path (obscure brand), rate-limit path (4th run in a day blocked)\n\n```json:metadata\n{\"files\": [\"components/PipelineRunner.tsx\", \"app/page.tsx\"], \"verifyCommand\": \"npm run dev — manual browser verification per plan Task 11 Steps 3-4\", \"acceptanceCriteria\": [\"sequential execution with correct card states\", \"429 shows page-level message not per-card error\", \"per-agent retry reuses upstream results\", \"form disabled while running\"]}\n```"
+    },
+    {
+      "id": 12,
+      "subject": "Task 12: README, deploy to GitHub + Vercel",
+      "status": "pending",
+      "blockedBy": [11],
+      "description": "**Goal:** Document the project, push to a new GitHub repo, deploy to Vercel with required env vars.\n\n**Files:**\n- Create: README.md\n\n**Verify:** Visit production URL, run pipeline once with a real brand — all 4 cards complete\n\n```json:metadata\n{\"files\": [\"README.md\"], \"verifyCommand\": \"visit production Vercel URL and run the pipeline once\", \"acceptanceCriteria\": [\"README complete\", \"pushed to GitHub\", \"deployed to Vercel with env vars set\", \"production run succeeds end-to-end\"]}\n```"
+    }
+  ],
+  "lastUpdated": "2026-08-11T00:00:00Z"
+}
