@@ -22,7 +22,7 @@ export default function RootLayout({
     <html lang="en" className={`${onest.variable} h-full antialiased`}>
       <body className="min-h-full">
         <header className="sticky top-0 z-50 border-b border-[var(--border-soft)] bg-[var(--background)]/75 backdrop-blur-md">
-          <div className="mx-auto flex h-14 w-full max-w-3xl items-center justify-between px-6">
+          <div className="mx-auto flex h-14 w-full max-w-4xl items-center justify-between px-6">
             <Link href="/" className="flex items-center gap-2 text-[14px] font-semibold tracking-tight text-[var(--foreground)]">
               <span className="flex h-5 w-5 items-center justify-center rounded-[6px] bg-[var(--accent)] text-[10px] font-bold text-white">
                 B
