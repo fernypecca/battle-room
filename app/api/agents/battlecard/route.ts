@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
   const rawCompetitorBrand = body?.competitorBrand
   const yourBrand = typeof rawYourBrand === 'string' ? rawYourBrand.trim() : ''
   const competitorBrand = typeof rawCompetitorBrand === 'string' ? rawCompetitorBrand.trim() : ''
-  const adInsights = (body?.adInsights as string | null | undefined) ?? null
+  const adInsights = typeof body?.adInsights === 'string' ? body.adInsights.trim() : null
 
   if (!yourBrand || !competitorBrand) {
     return NextResponse.json({ error: 'Missing "yourBrand" or "competitorBrand".' }, { status: 400 })
