@@ -94,7 +94,7 @@ export function AgentCard({
             <p className="text-[13px] text-[var(--muted)]">{description}</p>
           </div>
         </div>
-        <span className={`shrink-0 rounded-full px-2.5 py-1 text-[12px] font-medium ${pillClass}`}>
+        <span aria-live="polite" className={`shrink-0 rounded-full px-2.5 py-1 text-[12px] font-medium ${pillClass}`}>
           {STATUS_LABEL[status]}
         </span>
       </div>
