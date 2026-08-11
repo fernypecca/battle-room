@@ -14,12 +14,14 @@ function currentDayBucket(): string {
   return Math.floor(Date.now() / (DAY_SECONDS * 1000)).toString()
 }
 
+// Known limitation: non-atomic get-then-set. Acceptable for soft 3/day cap on a portfolio demo;
+// concurrent requests may briefly exceed the limit. Would need atomic INCR for stricter security.
 export async function checkRateLimit(ip: string): Promise<void> {
   const key = `battleroom:ratelimit:${ip}:${currentDayBucket()}`
   const current = await cache.get(key)
   const count = current ? parseInt(current, 10) : 0
 
-  if (count >= MAX_RUNS_PER_DAY) {
+  if (!Number.isFinite(count) || count >= MAX_RUNS_PER_DAY) {
     throw new RateLimitError()
   }
 
