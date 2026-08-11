@@ -98,21 +98,12 @@ export function PipelineRunner() {
     })
   }
 
-  async function runPipeline(pipelineInputs: PipelineInputs) {
-    setInputs(pipelineInputs)
-    setRateLimitMessage(null)
-    setSlots([{ ...IDLE_SLOT }, { ...IDLE_SLOT }, { ...IDLE_SLOT }, { ...IDLE_SLOT }])
-
-    updateSlot(0, { status: 'running' })
-    const adsResult = await runAdsAgent(pipelineInputs.competitorBrand)
-    if (adsResult.rateLimited) {
-      setRateLimitMessage(adsResult.errorMessage ?? 'Rate limit reached.')
-      updateSlot(0, { status: 'idle' })
-      return
-    }
-    updateSlot(0, adsResult)
-    if (adsResult.status === 'error') return
-
+  // Shared tail used both by the initial run and by retrying Agent 1 — runs
+  // battlecard, then media (independent of battlecard), then outbound (only
+  // if battlecard succeeded). Keeping this in one place means a successful
+  // retry of an earlier agent can resume the rest of the pipeline instead of
+  // leaving downstream idle slots stuck forever.
+  async function continueAfterAds(pipelineInputs: PipelineInputs, adsResult: AgentRunResult) {
     const adInsights = adsResult.status === 'done' ? (adsResult.result ?? null) : null
 
     updateSlot(1, { status: 'running' })
@@ -130,6 +121,24 @@ export function PipelineRunner() {
     updateSlot(3, outboundResult)
   }
 
+  async function runPipeline(pipelineInputs: PipelineInputs) {
+    setInputs(pipelineInputs)
+    setRateLimitMessage(null)
+    setSlots([{ ...IDLE_SLOT }, { ...IDLE_SLOT }, { ...IDLE_SLOT }, { ...IDLE_SLOT }])
+
+    updateSlot(0, { status: 'running' })
+    const adsResult = await runAdsAgent(pipelineInputs.competitorBrand)
+    if (adsResult.rateLimited) {
+      setRateLimitMessage(adsResult.errorMessage ?? 'Rate limit reached.')
+      updateSlot(0, { status: 'idle' })
+      return
+    }
+    updateSlot(0, adsResult)
+    if (adsResult.status === 'error') return
+
+    await continueAfterAds(pipelineInputs, adsResult)
+  }
+
   async function retryAgent(index: number) {
     if (!inputs) return
 
@@ -142,13 +151,31 @@ export function PipelineRunner() {
         return
       }
       updateSlot(0, result)
+      if (result.status === 'error') return
+      // Ads only ever fails-then-retries before battlecard has had a chance
+      // to run, so slot 1 is always idle here — but check explicitly rather
+      // than assume, in case that invariant ever changes.
+      if (slots[1].status === 'idle') {
+        await continueAfterAds(inputs, result)
+      }
       return
     }
 
     if (index === 1) {
       const adInsights = slots[0].status === 'done' ? slots[0].result : null
       updateSlot(1, { status: 'running', errorMessage: undefined })
-      updateSlot(1, await runBattlecardAgent(inputs.yourBrand, inputs.competitorBrand, adInsights))
+      const battlecardResult = await runBattlecardAgent(inputs.yourBrand, inputs.competitorBrand, adInsights)
+      updateSlot(1, battlecardResult)
+
+      if (slots[2].status === 'idle') {
+        updateSlot(2, { status: 'running' })
+        updateSlot(2, await runMediaAgent(inputs.competitorBrand))
+      }
+
+      if (slots[3].status === 'idle' && battlecardResult.status === 'done' && battlecardResult.result) {
+        updateSlot(3, { status: 'running' })
+        updateSlot(3, await runOutboundAgent(battlecardResult.result, inputs.persona))
+      }
       return
     }
 
@@ -159,7 +186,10 @@ export function PipelineRunner() {
     }
 
     const battlecard = slots[1].status === 'done' ? slots[1].result : null
-    if (!battlecard) return
+    if (!battlecard) {
+      updateSlot(3, { status: 'error', errorMessage: 'Battlecard is not ready yet — retry it first.' })
+      return
+    }
     updateSlot(3, { status: 'running', errorMessage: undefined })
     updateSlot(3, await runOutboundAgent(battlecard, inputs.persona))
   }
