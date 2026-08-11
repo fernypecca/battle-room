@@ -42,6 +42,10 @@ function buildNewsSearchUrl(brand: string): string {
  * Exception: throws if FIRECRAWL_API_KEY is unset (a deploy misconfiguration,
  * not a per-request scrape failure — this should fail loud, not be silently
  * cached as "no data found" for every brand).
+ *
+ * A genuinely empty successful scrape IS cached (it's a real fact about the
+ * brand); a failed scrape attempt is NOT cached, so a retry or fresh run
+ * gets a real second attempt instead of a stale false negative.
  */
 async function scrapeMarkdown(url: string): Promise<string | null> {
   const cacheKey = `scrape:${url}`
@@ -59,8 +63,11 @@ async function scrapeMarkdown(url: string): Promise<string | null> {
     })
     markdown = doc.markdown
   } catch (err) {
+    // Deliberately not cached: a transient failure (timeout, Firecrawl 5xx,
+    // network blip) is not the same fact as "this brand has no ads/coverage"
+    // and must not be locked in as that for an hour — the next attempt
+    // (retry or a fresh pipeline run) should genuinely hit Firecrawl again.
     console.error(`Firecrawl scrape failed for ${url}:`, err instanceof Error ? err.message : err)
-    await cache.set(cacheKey, '', SCRAPE_CACHE_TTL_SECONDS)
     return null
   }
 
