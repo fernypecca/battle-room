@@ -37,8 +37,11 @@ function buildNewsSearchUrl(brand: string): string {
 
 /**
  * Scrapes a URL via Firecrawl and returns trimmed markdown, or null if the
- * scrape fails or comes back empty. Callers treat null as "no data found" —
- * this never throws past this boundary, the pipeline must keep going.
+ * scrape fails or comes back empty. Callers treat null as "no data found".
+ * Never throws for scrape/data failures — the pipeline must keep going.
+ * Exception: throws if FIRECRAWL_API_KEY is unset (a deploy misconfiguration,
+ * not a per-request scrape failure — this should fail loud, not be silently
+ * cached as "no data found" for every brand).
  */
 async function scrapeMarkdown(url: string): Promise<string | null> {
   const cacheKey = `scrape:${url}`
