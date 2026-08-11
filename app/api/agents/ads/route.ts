@@ -15,9 +15,10 @@ Hard rules:
 
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null)
-  const competitorBrand = body?.competitorBrand as string | undefined
+  const rawBrand = body?.competitorBrand
+  const competitorBrand = typeof rawBrand === 'string' ? rawBrand.trim() : ''
 
-  if (!competitorBrand || typeof competitorBrand !== 'string') {
+  if (!competitorBrand) {
     return NextResponse.json({ error: 'Missing or invalid "competitorBrand".' }, { status: 400 })
   }
 
@@ -30,7 +31,13 @@ export async function POST(request: NextRequest) {
     throw err
   }
 
-  const scraped = await scrapeAdLibrary(competitorBrand)
+  let scraped: string | null
+  try {
+    scraped = await scrapeAdLibrary(competitorBrand)
+  } catch (err) {
+    console.error('Ad intelligence agent failed (scrape):', err)
+    return NextResponse.json({ error: 'Ad intelligence agent failed.' }, { status: 502 })
+  }
 
   if (!scraped) {
     return NextResponse.json({ found: false, insights: null })
