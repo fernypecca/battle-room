@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 
 const DEFAULT_MODEL = 'claude-sonnet-5'
-const MAX_TOKENS = 1024
+const MAX_TOKENS = 2048
 
 let anthropicClient: Anthropic | null = null
 
