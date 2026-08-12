@@ -1,6 +1,8 @@
-# battle-room
+# Growth Agent Orchestrator
 
 A portfolio demo of AI agent orchestration: four agents run in sequence to turn a competitor's name into a live ad-intelligence brief, a battlecard, a media coverage summary, and a personalized outbound email sequence.
+
+(Repo is named `v2-claude` — `growth-agent-orchestrator` was already taken by another project on this account. The app itself is titled Growth Agent Orchestrator throughout.)
 
 Built after reading a job posting that asked for exactly this pattern — scrape competitor ads, rewrite battlecards, summarize media coverage, draft outbound sequences. This isn't built for that specific application; it's built to show the pattern works, as a personal portfolio piece.
 
@@ -52,14 +54,19 @@ Typeface is SF on Apple platforms (`-apple-system`), Onest elsewhere (`app/layou
 
 ```
 app/
-  page.tsx                          → renders the header + PipelineRunner
-  layout.tsx                        → fonts, metadata, Vercel Analytics
+  page.tsx                          → hero, "how it works" explainer, and PipelineRunner
+  layout.tsx                        → sticky header, fonts, metadata, Vercel Analytics
   globals.css                       → design tokens (colors, shadows, font stack)
   api/agents/ads/route.ts           → Ad Intelligence agent + the pipeline's rate limit check
   api/agents/battlecard/route.ts    → Battlecard Writer agent
   api/agents/media/route.ts         → Media Coverage agent
   api/agents/outbound/route.ts      → Outbound Sequence agent
 components/
+  agents.tsx                        → shared agent metadata (title/description/icon) — single
+                                       source of truth for both the static explainer and the
+                                       live pipeline cards, so they can't drift apart
+  HowItWorks.tsx                    → static, always-visible explainer of what each agent does
+                                       and how to use the tool (shown before the form)
   PipelineForm.tsx                  → brand/persona input form
   PipelineRunner.tsx                → orchestrates the 4 agent calls in sequence, holds run state
   AgentCard.tsx                     → per-agent result card (5 visual states: idle, running, done, empty, error)

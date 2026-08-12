@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, type ReactNode } from 'react'
+import { useState } from 'react'
 import { AgentCard, type AgentStatus } from './AgentCard'
 import { PipelineForm, type PipelineInputs } from './PipelineForm'
+import { AGENTS } from './agents'
 
 interface AgentSlot {
   status: AgentStatus
@@ -15,61 +16,6 @@ interface AgentRunResult extends Partial<AgentSlot> {
 }
 
 const IDLE_SLOT: AgentSlot = { status: 'idle', result: null }
-
-const ICON_PROPS = {
-  width: 18,
-  height: 18,
-  viewBox: '0 0 24 24',
-  fill: 'none',
-  stroke: 'currentColor',
-  strokeWidth: 1.75,
-  strokeLinecap: 'round' as const,
-  strokeLinejoin: 'round' as const,
-}
-
-const AGENT_META: { title: string; description: string; icon: ReactNode }[] = [
-  {
-    title: 'Ad Intelligence',
-    description: "Scrapes the competitor's live ads and extracts their angles.",
-    icon: (
-      <svg {...ICON_PROPS}>
-        <path d="M3 11v2a2 2 0 0 0 2 2h1l2 5h2l-1.5-5H10l8 4V6l-8 4H5a2 2 0 0 0-2 2Z" />
-        <path d="M18 9v6" />
-      </svg>
-    ),
-  },
-  {
-    title: 'Battlecard Writer',
-    description: 'Drafts your positioning against this competitor.',
-    icon: (
-      <svg {...ICON_PROPS}>
-        <path d="M12 3 4 6v6c0 4.5 3.2 7.4 8 9 4.8-1.6 8-4.5 8-9V6l-8-3Z" />
-        <path d="M9 12.5 11 14.5 15.5 10" />
-      </svg>
-    ),
-  },
-  {
-    title: 'Media Coverage',
-    description: "Summarizes the competitor's recent press.",
-    icon: (
-      <svg {...ICON_PROPS}>
-        <rect x="3" y="5" width="14" height="15" rx="1.5" />
-        <path d="M7 9h6M7 12.5h6M7 16h4" />
-        <path d="M17 8h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H8" />
-      </svg>
-    ),
-  },
-  {
-    title: 'Outbound Sequence',
-    description: 'Writes a 3-email sequence for your target persona.',
-    icon: (
-      <svg {...ICON_PROPS}>
-        <path d="M4.5 4.5 20 12 4.5 19.5 8 12 4.5 4.5Z" />
-        <path d="M8 12h6" />
-      </svg>
-    ),
-  },
-]
 
 async function callAgent<T>(
   url: string,
@@ -253,7 +199,7 @@ export function PipelineRunner() {
       {inputs && (
         <div className="flex flex-col gap-4">
           {slots.map((slot, i) => (
-            <div key={AGENT_META[i].title} className="animate-rise relative" style={{ animationDelay: `${i * 0.06}s` }}>
+            <div key={AGENTS[i].title} className="animate-rise relative" style={{ animationDelay: `${i * 0.06}s` }}>
               {/* Connector to the previous card, scoped to this row's own gap
                   so it never depends on a neighboring card's variable height
                   (cards grow a lot once expanded with a result). */}
@@ -266,9 +212,9 @@ export function PipelineRunner() {
               )}
               <AgentCard
                 index={i + 1}
-                title={AGENT_META[i].title}
-                description={AGENT_META[i].description}
-                icon={AGENT_META[i].icon}
+                title={AGENTS[i].title}
+                description={AGENTS[i].description}
+                icon={AGENTS[i].icon}
                 status={slot.status}
                 result={slot.result}
                 errorMessage={slot.errorMessage}
