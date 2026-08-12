@@ -1,31 +1,44 @@
 @import "tailwindcss";
 
 :root {
-  --background: #fbfbfa;
+  /* Warm, considered neutrals — not cold SaaS grey. */
+  --background: #faf9f5;
   --paper: #ffffff;
-  --surface: #f5f5f4;
-  --foreground: #1d1d1f;
-  --muted: #6e6e73;
-  --muted-2: #86868b;
-  --border: #d8d8dc;
-  --border-soft: rgba(29, 29, 31, 0.08);
-  --accent: #1e3a2f;
-  --accent-2: #2c5442;
-  --accent-text: #16291f;
-  --accent-tint: #e8efeb;
-  --accent-glow: rgba(30, 58, 47, 0.14);
-  --bad: #c9433f;
-  --bad-tint: #fbebea;
-  --warn: #ab7420;
-  --warn-tint: #f9f0df;
+  --surface: #f1efe6;
+  --foreground: #17181a;
+  --muted: #66675f;
+  --muted-2: #8a8b81;
+  --border: #e3e0d3;
+  --border-soft: rgba(23, 24, 26, 0.08);
+
+  /* Signal green — vivid and saturated, not the muted corporate tone this
+     started as. Reads as "growth / go", not "finance PDF". */
+  --accent: #0ea968;
+  --accent-2: #0c8c56;
+  --accent-text: #0a6b43;
+  --accent-tint: #e1f5eb;
+  --accent-glow: rgba(14, 169, 104, 0.22);
+  --accent-bright: #22d488;
+
+  --bad: #d1453f;
+  --bad-tint: #fbeae9;
+  --warn: #b5791a;
+  --warn-tint: #faf0dd;
+
+  /* Dark hero band — near-black with a faint green undertone, not flat #000. */
+  --hero-bg: #0a0f0c;
+  --hero-bg-2: #0e1712;
+  --hero-fg: #f4f6f4;
+  --hero-muted: #a7b3ab;
+  --hero-border: rgba(244, 246, 244, 0.1);
 
   --font-sans: -apple-system, BlinkMacSystemFont, var(--font-onest), "Helvetica Neue", sans-serif;
 
-  --shadow-xs: 0 1px 1px rgba(29, 29, 31, 0.04);
-  --shadow-sm: 0 1px 2px rgba(29, 29, 31, 0.04), 0 3px 8px -3px rgba(29, 29, 31, 0.06);
-  --shadow-md: 0 2px 6px -2px rgba(29, 29, 31, 0.07), 0 16px 32px -16px rgba(29, 29, 31, 0.14);
-  --shadow-lg: 0 8px 24px -8px rgba(29, 29, 31, 0.12), 0 32px 64px -24px rgba(29, 29, 31, 0.18);
-  --shadow-accent: 0 4px 14px -4px var(--accent-glow), 0 20px 40px -20px var(--accent-glow);
+  --shadow-xs: 0 1px 1px rgba(23, 24, 26, 0.04);
+  --shadow-sm: 0 1px 2px rgba(23, 24, 26, 0.04), 0 3px 8px -3px rgba(23, 24, 26, 0.06);
+  --shadow-md: 0 2px 6px -2px rgba(23, 24, 26, 0.07), 0 16px 32px -16px rgba(23, 24, 26, 0.14);
+  --shadow-lg: 0 8px 24px -8px rgba(23, 24, 26, 0.12), 0 32px 64px -24px rgba(23, 24, 26, 0.18);
+  --shadow-accent: 0 4px 16px -4px var(--accent-glow), 0 20px 44px -20px var(--accent-glow);
 
   --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -42,10 +55,14 @@
   --color-accent-2: var(--accent-2);
   --color-accent-text: var(--accent-text);
   --color-accent-tint: var(--accent-tint);
+  --color-accent-bright: var(--accent-bright);
   --color-bad: var(--bad);
   --color-bad-tint: var(--bad-tint);
   --color-warn: var(--warn);
   --color-warn-tint: var(--warn-tint);
+  --color-hero-bg: var(--hero-bg);
+  --color-hero-fg: var(--hero-fg);
+  --color-hero-muted: var(--hero-muted);
   --font-sans: var(--font-sans);
   --shadow-soft: var(--shadow-sm);
   --shadow-elevated: var(--shadow-md);
@@ -65,22 +82,24 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Soft atmospheric wash behind the hero — a single restrained bloom of the
-   accent color, not a loud gradient block. Reads as depth, not decoration. */
-.hero-atmosphere {
+/* The dark hero band's atmosphere — a real, visible bloom of signal green
+   and a warm amber ember behind it for richness, not a single flat wash.
+   This is the one loud moment on the page; everything below stays calm. */
+.hero-dark-atmosphere {
   background:
-    radial-gradient(48% 60% at 82% -8%, rgba(30, 58, 47, 0.08), transparent 65%),
-    radial-gradient(38% 46% at 6% 18%, rgba(30, 58, 47, 0.05), transparent 70%);
+    radial-gradient(60% 70% at 50% -10%, rgba(34, 212, 136, 0.35), transparent 60%),
+    radial-gradient(45% 50% at 85% 15%, rgba(245, 166, 35, 0.14), transparent 65%),
+    radial-gradient(50% 60% at 10% 30%, rgba(14, 169, 104, 0.18), transparent 65%);
 }
 
-/* Fine paper grain — extremely subtle, gives the flat background a material
-   quality instead of the dead-flat look of a plain CSS color. */
-.grain::before {
+/* Fine grain over the dark hero — keeps the near-black from looking like a
+   flat digital fill, gives it the texture of an actual material. */
+.grain::after {
   content: "";
   position: absolute;
   inset: 0;
   pointer-events: none;
-  opacity: 0.4;
+  opacity: 0.5;
   mix-blend-mode: overlay;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");
 }
