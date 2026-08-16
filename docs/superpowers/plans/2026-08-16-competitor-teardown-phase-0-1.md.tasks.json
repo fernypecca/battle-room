@@ -1,0 +1,123 @@
+{
+  "planPath": "docs/superpowers/plans/2026-08-16-competitor-teardown-phase-0-1.md",
+  "tasks": [
+    {
+      "id": 0,
+      "subject": "Task 0: Validate review sources (Phase 0 gate)",
+      "status": "pending",
+      "description": "**Goal:** Go/no-go on whether G2, Capterra, Trustpilot can be scraped for real customer quotes. The launch angle rests on this.\n\n**Spike, not TDD.** Script is throwaway.\n\n**Decision rule:** 2+ sources with real quotes -> proceed. Only 1 -> target only that one. None -> STOP and escalate to user.\n\n```json:metadata\n{\"files\": [\"scripts/spike-sources.ts\", \"docs/superpowers/plans/2026-08-16-phase-0-findings.md\"], \"verifyCommand\": \"npx tsx scripts/spike-sources.ts\", \"acceptanceCriteria\": [\"3 review sources probed against 5 brands\", \"findings file records working URL patterns\", \"explicit go/no-go recorded\"]}\n```"
+    },
+    {
+      "id": 1,
+      "subject": "Task 1: Test infrastructure (vitest)",
+      "status": "pending",
+      "description": "**Goal:** Vitest with the @/ path alias. The repo currently has no test framework.\n\n**Files:** vitest.config.ts, package.json\n\n```json:metadata\n{\"files\": [\"vitest.config.ts\", \"package.json\"], \"verifyCommand\": \"npm test\", \"acceptanceCriteria\": [\"npm test runs and passes\", \"@/ alias resolves in tests\"]}\n```"
+    },
+    {
+      "id": 2,
+      "subject": "Task 2: Evidence types and citation validator",
+      "status": "pending",
+      "blockedBy": [1],
+      "description": "**Goal:** The evidence contract in code plus the pure validator that makes citation integrity independent of the model.\n\n**Files:** lib/evidence.ts, lib/__tests__/evidence.test.ts\n\n```json:metadata\n{\"files\": [\"lib/evidence.ts\", \"lib/__tests__/evidence.test.ts\"], \"verifyCommand\": \"npm test -- evidence\", \"acceptanceCriteria\": [\"unknown citations stripped\", \"known citations preserved\", \"dropped ids deduped\"]}\n```"
+    },
+    {
+      "id": 3,
+      "subject": "Task 3: Canonical slug derivation",
+      "status": "pending",
+      "blockedBy": [1],
+      "description": "**Goal:** Turn any pasted URL into the stable slug the public teardown lives at.\n\n**Files:** lib/slug.ts, lib/__tests__/slug.test.ts\n\n```json:metadata\n{\"files\": [\"lib/slug.ts\", \"lib/__tests__/slug.test.ts\"], \"verifyCommand\": \"npm test -- slug\", \"acceptanceCriteria\": [\"notion.so and https://www.notion.so/pricing both give notion\", \"app.hubspot.com gives hubspot\", \"junk returns null\"]}\n```"
+    },
+    {
+      "id": 4,
+      "subject": "Task 4: JSON responses from Claude",
+      "status": "pending",
+      "blockedBy": [1],
+      "description": "**Goal:** askClaudeJson so collectors receive typed evidence instead of prose. Append only — leave existing askClaude untouched.\n\n**Files:** lib/claude.ts, lib/__tests__/claude.test.ts\n\n```json:metadata\n{\"files\": [\"lib/claude.ts\", \"lib/__tests__/claude.test.ts\"], \"verifyCommand\": \"npm test -- claude\", \"acceptanceCriteria\": [\"fenced and bare JSON both parse\", \"prose around JSON tolerated\", \"clear error on failure\"]}\n```"
+    },
+    {
+      "id": 5,
+      "subject": "Task 5: Collector interface and shared extraction",
+      "status": "pending",
+      "blockedBy": [2, 4],
+      "description": "**Goal:** One shared contract and one shared scraped-text-to-cited-evidence call.\n\n**Files:** lib/collectors/types.ts, lib/collectors/extract.ts, lib/__tests__/extract.test.ts\n\n```json:metadata\n{\"files\": [\"lib/collectors/types.ts\", \"lib/collectors/extract.ts\", \"lib/__tests__/extract.test.ts\"], \"verifyCommand\": \"npm test -- extract\", \"acceptanceCriteria\": [\"sequential prefixed ids\", \"empty quotes dropped\", \"quotes truncated to 300\"]}\n```"
+    },
+    {
+      "id": 6,
+      "subject": "Task 6: Web and pricing collector",
+      "status": "pending",
+      "blockedBy": [5],
+      "description": "**Goal:** The collector that always works and gives every other source its context. Also exports scrapeMarkdown from lib/firecrawl.ts.\n\n**Files:** lib/collectors/web.ts, lib/firecrawl.ts\n\n```json:metadata\n{\"files\": [\"lib/collectors/web.ts\", \"lib/firecrawl.ts\"], \"verifyCommand\": \"npm run build\", \"acceptanceCriteria\": [\"home and pricing both scraped\", \"never throws\", \"ids do not collide\"]}\n```"
+    },
+    {
+      "id": 7,
+      "subject": "Task 7: Reviews collector",
+      "status": "pending",
+      "blockedBy": [0, 5],
+      "description": "**Goal:** The differentiating collector — verbatim customer complaints and praise.\n\n**PREREQUISITE:** Read docs/superpowers/plans/2026-08-16-phase-0-findings.md and use only the URL patterns it recorded as working.\n\n**Files:** lib/collectors/reviews.ts\n\n```json:metadata\n{\"files\": [\"lib/collectors/reviews.ts\"], \"verifyCommand\": \"npm run build\", \"acceptanceCriteria\": [\"uses only Phase 0 validated sources\", \"first source with evidence wins\", \"returns null when all empty\"]}\n```"
+    },
+    {
+      "id": 8,
+      "subject": "Task 8: Press collector via RSS",
+      "status": "pending",
+      "blockedBy": [5],
+      "description": "**Goal:** Replace the fragile Google News scrape with its RSS feed. Needs no model call — headlines are already verbatim and each carries its own link.\n\n**Files:** lib/collectors/press.ts, lib/__tests__/press.test.ts\n\n```json:metadata\n{\"files\": [\"lib/collectors/press.ts\", \"lib/__tests__/press.test.ts\"], \"verifyCommand\": \"npm test -- press\", \"acceptanceCriteria\": [\"RSS parsed to title and link\", \"malformed xml returns empty array\", \"capped at 8 items\"]}\n```"
+    },
+    {
+      "id": 9,
+      "subject": "Task 9: Ads collector and parallel runner",
+      "status": "pending",
+      "blockedBy": [6, 7, 8],
+      "description": "**Goal:** Port existing ad logic to the collector contract, then run all four under Promise.allSettled.\n\n**Files:** lib/collectors/ads.ts, lib/collectors/index.ts, lib/__tests__/collectors.test.ts\n\n```json:metadata\n{\"files\": [\"lib/collectors/ads.ts\", \"lib/collectors/index.ts\", \"lib/__tests__/collectors.test.ts\"], \"verifyCommand\": \"npm test -- collectors\", \"acceptanceCriteria\": [\"allSettled prevents one failure stopping others\", \"thrown collector becomes error result\", \"mergeEvidence skips nulls\"]}\n```"
+    },
+    {
+      "id": 10,
+      "subject": "Task 10: Synthesizer",
+      "status": "pending",
+      "blockedBy": [2, 4],
+      "description": "**Goal:** One model call turning all evidence into the seven-section report, with every claim cited and every citation validated in code afterwards.\n\n**Files:** lib/synthesize.ts, lib/__tests__/synthesize.test.ts\n\n```json:metadata\n{\"files\": [\"lib/synthesize.ts\", \"lib/__tests__/synthesize.test.ts\"], \"verifyCommand\": \"npm test -- synthesize\", \"acceptanceCriteria\": [\"seven sections always returned in order\", \"unknown citations stripped\", \"missing sections flagged hasData false\"]}\n```"
+    },
+    {
+      "id": 11,
+      "subject": "Task 11: Metrics counters",
+      "status": "pending",
+      "blockedBy": [1],
+      "description": "**Goal:** Durable counters in place from day one, because adoption evidence needs months of accumulation.\n\n**Files:** lib/cache.ts, lib/metrics.ts, lib/__tests__/cache.test.ts\n\n```json:metadata\n{\"files\": [\"lib/cache.ts\", \"lib/metrics.ts\", \"lib/__tests__/cache.test.ts\"], \"verifyCommand\": \"npm test -- cache\", \"acceptanceCriteria\": [\"incr on both backends\", \"metrics never throw\", \"collector health tracked\"]}\n```"
+    },
+    {
+      "id": 12,
+      "subject": "Task 12: Teardown store and API route",
+      "status": "pending",
+      "blockedBy": [3, 9, 10, 11],
+      "description": "**Goal:** The single endpoint tying it together — cache lookup, collect, synthesize, store, return.\n\n**Critical verification:** manually confirm every claim ends with an [id] present in the evidence array. This is the acceptance test for the entire product thesis.\n\n**WATCH OUT:** maxDuration = 120 exceeds the Vercel Hobby limit. If deploy rejects it, surface to the user — do not silently lower it.\n\n**Files:** lib/teardownStore.ts, app/api/teardown/route.ts\n\n```json:metadata\n{\"files\": [\"lib/teardownStore.ts\", \"app/api/teardown/route.ts\"], \"verifyCommand\": \"npm run build\", \"acceptanceCriteria\": [\"cached served without scraping\", \"every claim carries a valid citation\", \"400/429/422 handled\"]}\n```"
+    },
+    {
+      "id": 13,
+      "subject": "Task 13: Citation chip component",
+      "status": "pending",
+      "blockedBy": [2],
+      "description": "**Goal:** The signature interaction. Carries the entire 'with the receipts' promise, so it gets disproportionate design attention.\n\n**Files:** components/Citation.tsx\n\n```json:metadata\n{\"files\": [\"components/Citation.tsx\"], \"verifyCommand\": \"npm run build\", \"acceptanceCriteria\": [\"works on touch not hover-only\", \"no popover overflow at 375px\", \"existing tokens only\"]}\n```"
+    },
+    {
+      "id": 14,
+      "subject": "Task 14: Public teardown page",
+      "status": "pending",
+      "blockedBy": [12, 13],
+      "description": "**Goal:** The shared artifact — a document-grade report page at a stable URL.\n\n**Files:** components/TeardownReport.tsx, app/teardown/[slug]/page.tsx\n\n```json:metadata\n{\"files\": [\"components/TeardownReport.tsx\", \"app/teardown/[slug]/page.tsx\"], \"verifyCommand\": \"npm run build\", \"acceptanceCriteria\": [\"citations render as chips not literal text\", \"no-data sections look deliberate\", \"byline visible\", \"constrained measure\"]}\n```"
+    },
+    {
+      "id": 15,
+      "subject": "Task 15: Point home page at the new flow",
+      "status": "pending",
+      "blockedBy": [12],
+      "description": "**Goal:** One URL field replaces the three-string form. Deletes the superseded ads and media routes; KEEPS battlecard and outbound for Phase 2.\n\n**Files:** components/TeardownForm.tsx, app/page.tsx\n\n```json:metadata\n{\"files\": [\"components/TeardownForm.tsx\", \"app/page.tsx\"], \"verifyCommand\": \"npm run build && npx tsc --noEmit && npm test\", \"acceptanceCriteria\": [\"submit navigates to teardown page\", \"inline errors no alert()\", \"battlecard and outbound routes preserved\"]}\n```"
+    },
+    {
+      "id": 16,
+      "subject": "Task 16: Correct the stale README",
+      "status": "pending",
+      "blockedBy": [15],
+      "description": "**Goal:** Make the README describe what the code actually is. The documented palette (Alpine Green #1e3a2f) does not match globals.css (signal green #0ea968 over warm neutrals).\n\n**Files:** README.md\n\n```json:metadata\n{\"files\": [\"README.md\"], \"verifyCommand\": \"\", \"acceptanceCriteria\": [\"palette matches globals.css\", \"architecture describes collectors not chain\", \"limitations updated honestly\"]}\n```"
+    }
+  ],
+  "lastUpdated": "2026-08-16T00:00:00Z"
+}
