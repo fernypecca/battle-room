@@ -2,8 +2,14 @@ import { cache } from './cache'
 import type { Teardown } from './synthesize'
 
 const TTL_SECONDS = 60 * 60 * 24 * 7
-const KEY = (slug: string) => `teardown:v1:${slug}`
-const INDEX_KEY = 'teardown:v1:index'
+
+// Bumped to v2 to retire teardowns generated before the scrape-windowing fix.
+// Those were cached with a permanently empty "what their customers say"
+// section, and since the store is keyed only by slug nothing else would have
+// evicted them for a week. Bump this whenever a change makes existing stored
+// teardowns wrong rather than merely older.
+const KEY = (slug: string) => `teardown:v2:${slug}`
+const INDEX_KEY = 'teardown:v2:index'
 
 export async function getTeardown(slug: string): Promise<Teardown | null> {
   const raw = await cache.get(KEY(slug))

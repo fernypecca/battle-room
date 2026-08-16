@@ -1,7 +1,12 @@
 import Anthropic from '@anthropic-ai/sdk'
 
 const DEFAULT_MODEL = 'claude-sonnet-5'
-const MAX_TOKENS = 2048
+
+// The synthesizer writes seven cited sections in one call. At 2048 this
+// silently truncated its JSON mid-string once the collectors started
+// surfacing real review and ad evidence, which surfaced as an opaque
+// "could not be parsed as JSON" failure rather than as "ran out of room".
+const MAX_TOKENS = 8192
 
 let anthropicClient: Anthropic | null = null
 
@@ -35,6 +40,14 @@ export async function askClaude(systemPrompt: string, userPrompt: string): Promi
   const textBlock = response.content.find((block) => block.type === 'text')
   if (!textBlock || textBlock.type !== 'text') {
     throw new Error('Claude response contained no text block')
+  }
+
+  // Hitting the cap mangles structured output, and downstream that shows up
+  // as a confusing JSON parse error far from the real cause. Name it here.
+  if (response.stop_reason === 'max_tokens') {
+    throw new Error(
+      `Claude response hit the ${MAX_TOKENS}-token cap and was truncated. Raise MAX_TOKENS or send less input.`
+    )
   }
 
   return textBlock.text.trim()
