@@ -731,6 +731,185 @@ git commit -m "feat: add collector interface and verbatim evidence extraction"
 
 ---
 
+## Task 5b: Firecrawl throttling and retry
+
+**Goal:** Stop the collectors from tripping Firecrawl's rate limit. Phase 0 found the account capped at **10 requests/minute**, which killed 15 of 25 calls on an unthrottled pass. Four parallel collectors can fire 6+ scrapes within a second, so this must land before they do.
+
+**Files:**
+- Modify: `lib/firecrawl.ts`
+- Create: `lib/throttle.ts`
+- Test: `lib/__tests__/throttle.test.ts`
+
+**Acceptance Criteria:**
+- [ ] Scrapes are serialized to a minimum interval apart
+- [ ] A 429 or rate-limit error retries with backoff, up to 2 retries
+- [ ] Exhausted retries return `null` (the existing "no data" path), never throw
+- [ ] Failed scrapes are still not cached, per the existing comment in `scrapeMarkdown`
+
+**Verify:** `npm test -- throttle` → all tests pass
+
+**Steps:**
+
+- [ ] **Step 1: Write the failing tests**
+
+Create `lib/__tests__/throttle.test.ts`:
+
+```ts
+import { describe, it, expect, vi } from 'vitest'
+import { createThrottle, isRateLimitError } from '@/lib/throttle'
+
+describe('createThrottle', () => {
+  it('runs tasks one at a time in order', async () => {
+    const order: number[] = []
+    const throttle = createThrottle(0)
+    await Promise.all([1, 2, 3].map((n) => throttle(async () => { order.push(n) })))
+    expect(order).toEqual([1, 2, 3])
+  })
+
+  it('spaces calls by at least the minimum interval', async () => {
+    vi.useFakeTimers()
+    const throttle = createThrottle(100)
+    const started: number[] = []
+    const runs = [1, 2].map((n) => throttle(async () => { started.push(n === 1 ? 0 : Date.now()) }))
+    await vi.advanceTimersByTimeAsync(250)
+    await Promise.all(runs)
+    expect(started).toHaveLength(2)
+    vi.useRealTimers()
+  })
+
+  it('does not let one rejection stall the queue', async () => {
+    const throttle = createThrottle(0)
+    const failed = throttle(async () => { throw new Error('boom') })
+    await expect(failed).rejects.toThrow('boom')
+    await expect(throttle(async () => 'ok')).resolves.toBe('ok')
+  })
+})
+
+describe('isRateLimitError', () => {
+  it('detects a 429 status', () => {
+    expect(isRateLimitError({ statusCode: 429 })).toBe(true)
+  })
+
+  it('detects rate-limit wording', () => {
+    expect(isRateLimitError(new Error('Rate limit exceeded'))).toBe(true)
+  })
+
+  it('is false for unrelated errors', () => {
+    expect(isRateLimitError(new Error('timeout'))).toBe(false)
+  })
+})
+```
+
+- [ ] **Step 2: Run to confirm failure**
+
+Run: `npm test -- throttle`
+Expected: FAIL — module not found.
+
+- [ ] **Step 3: Implement**
+
+Create `lib/throttle.ts`:
+
+```ts
+/**
+ * Phase 0 measured this account at 10 Firecrawl requests/minute, and an
+ * unthrottled pass lost 15 of 25 calls. Four collectors running in parallel
+ * would burst well past that, so every scrape goes through one serialized
+ * queue with a minimum gap between calls.
+ *
+ * Scope: this is per-process. On serverless it protects a single run, not
+ * concurrent runs from different visitors — slug-level caching is what keeps
+ * that pressure down, and the retry below absorbs what slips through.
+ */
+export function createThrottle(minIntervalMs: number) {
+  let chain: Promise<unknown> = Promise.resolve()
+  let lastStart = 0
+
+  return function throttle<T>(task: () => Promise<T>): Promise<T> {
+    const result = chain.then(async () => {
+      const wait = Math.max(0, lastStart + minIntervalMs - Date.now())
+      if (wait > 0) await new Promise((r) => setTimeout(r, wait))
+      lastStart = Date.now()
+      return task()
+    })
+
+    // The queue advances on settle, so one rejected task cannot stall it.
+    chain = result.catch(() => {})
+    return result as Promise<T>
+  }
+}
+
+export function isRateLimitError(err: unknown): boolean {
+  if (typeof err === 'object' && err !== null && 'statusCode' in err) {
+    if ((err as { statusCode?: number }).statusCode === 429) return true
+  }
+  const message = err instanceof Error ? err.message : String(err)
+  return /rate.?limit|too many requests|\b429\b/i.test(message)
+}
+```
+
+- [ ] **Step 4: Wire it into the scraper**
+
+In `lib/firecrawl.ts`, add near the top:
+
+```ts
+import { createThrottle, isRateLimitError } from './throttle'
+
+// 10 req/min measured in Phase 0; 7s leaves headroom for clock skew and
+// for other requests from the same deployment.
+const scrapeThrottle = createThrottle(7_000)
+const MAX_RETRIES = 2
+```
+
+Then replace the `try`/`catch` around the `client.scrape` call inside `scrapeMarkdown` with a retrying version, keeping the surrounding cache logic and comments exactly as they are:
+
+```ts
+  const client = getFirecrawlClient()
+  let markdown: string | undefined
+  let lastError: unknown
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const doc = await scrapeThrottle(() =>
+        client.scrape(url, { formats: ['markdown'], timeout: SCRAPE_TIMEOUT_MS })
+      )
+      markdown = doc.markdown
+      lastError = undefined
+      break
+    } catch (err) {
+      lastError = err
+      if (!isRateLimitError(err) || attempt === MAX_RETRIES) break
+      // Exponential backoff on rate limiting specifically — other failures
+      // are not worth burning the request budget on.
+      await new Promise((r) => setTimeout(r, 5_000 * 2 ** attempt))
+    }
+  }
+
+  if (lastError !== undefined) {
+    // Deliberately not cached: a transient failure (timeout, Firecrawl 5xx,
+    // rate limit, network blip) is not the same fact as "this brand has no
+    // ads/coverage" and must not be locked in as that for an hour.
+    console.error(`Firecrawl scrape failed for ${url}:`, lastError instanceof Error ? lastError.message : lastError)
+    return null
+  }
+```
+
+- [ ] **Step 5: Run to confirm pass**
+
+Run: `npm test -- throttle && npm run build`
+Expected: tests pass, build clean.
+
+- [ ] **Step 6: Commit**
+
+```bash
+cd /Users/fpeccatiello/Documents/Vibecoding/v2-claude
+git add lib/throttle.ts lib/firecrawl.ts lib/__tests__/throttle.test.ts
+git commit -m "feat: throttle and retry firecrawl scrapes against the 10/min cap"
+```
+
+**Carry to the user, do not decide alone:** with a 7s gap between scrapes, a cold run doing ~5 scrapes takes ~35s of throttling alone, pushing total runtime past the 30s the UI promises. If that proves too slow in Task 12, the options are a paid Firecrawl tier or fewer scrapes per run — a cost decision, not an implementation one.
+
+---
+
 ## Task 6: Web and pricing collector
 
 **Goal:** The collector that always works and gives every other source its context.
@@ -871,12 +1050,18 @@ import type { CollectorResult } from '@/lib/evidence'
 const FOCUS =
   'Verbatim sentences written by customers about this product — specific complaints, specific praise, missing features, pricing objections, and comparisons to alternatives. Prefer concrete criticism over generic star-rating summaries.'
 
-// Adjust to match the Phase 0 findings. Order matters: the first source
-// that returns evidence wins, so put the most reliable one first.
+// Set from the Phase 0 findings. G2 was the most reliable and its URL is
+// derivable from the slug, so it goes first. Trustpilot works but tripped a
+// bot check inconsistently (not by domain), so it is the fallback and leans
+// on the retry in lib/firecrawl.ts.
+//
+// Capterra is deliberately excluded: it returned real reviews, but only at
+// capterra.com/p/{id}/{Slug}/reviews/, and that numeric id is not derivable
+// from the slug. Resolving it costs an extra scrape against a 10 req/min
+// budget to reach a third source when two already clear the bar.
 const SOURCES: Array<(slug: string) => string> = [
   (slug) => `https://www.g2.com/products/${slug}/reviews`,
   (slug) => `https://www.trustpilot.com/review/${slug}.com`,
-  (slug) => `https://www.capterra.com/search/?query=${slug}`,
 ]
 
 export const reviewsCollector: Collector = {
