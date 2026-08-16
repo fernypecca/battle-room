@@ -1,7 +1,7 @@
 # Competitor Teardown — Design Spec
 
 Date: 2026-08-16
-Status: Draft — pending review
+Status: Approved
 Supersedes: [2026-08-11-battle-room-design.md](2026-08-11-battle-room-design.md)
 
 ## Purpose
@@ -134,6 +134,23 @@ Author attribution is a feature here, not a footer line. Every shared teardown i
 - Author name rendered into the OG image
 - `<meta name="author">` and `schema.org/Person` structured data marking authorship of the analysis
 - Public repo prominently linked; the README argues the contribution rather than merely documenting it
+
+## Visual design
+
+The teardown page is the artifact that gets shared, so its design is a product requirement, not a finishing pass. It has to read as an expensive research report — the kind of page someone screenshots — not as a chat transcript with links.
+
+Existing tokens carry forward unchanged: neutral greys (`#ffffff` / `#f5f5f7` / `#1d1d1f` / `#6e6e73`), Alpine Green accent (`#1e3a2f`, accent text `#16291f`), SF on Apple platforms with Onest elsewhere, tokens as CSS variables mapped into Tailwind v4 `@theme inline`.
+
+New surfaces and their requirements:
+
+- **Teardown page** — document typography, not app typography. Constrained measure (~68ch) for body text, real hierarchy between section headings and claims, generous vertical rhythm between the seven sections. Left-aligned asymmetric composition; no centered hero. A sticky section nav that tracks scroll position, since the report is long and people arrive wanting one section.
+- **The citation chip** — the signature interaction of the whole product, and the thing that must feel most crafted. An `[id]` is a quiet inline affordance, not a loud badge: subtle, non-competing with body text at rest, revealing the verbatim quote, source domain, and fetch date on hover or tap. It must work on touch. This single element carries the entire "with the receipts" promise, so it gets disproportionate design attention.
+- **Section 4 (customer quotes)** — deserves its own treatment. Verbatim complaints set as pull quotes, visually distinct from synthesized prose, so the reader can tell at a glance what is evidence and what is analysis.
+- **"No data" states** — must look deliberate and confident, not broken. An empty ads section is an honest finding, and should read that way.
+- **Library index** — restrained, scannable, gets denser as it grows. It will eventually hold hundreds of entries.
+- **OG image** — composed, not templated. Competitor name, two hard data points, author byline. It is the first impression for everyone arriving from a shared link.
+
+Motion stays subtle and physical (ease-out, 200–300ms) on scroll reveals and the citation chip. Nothing bouncy, nothing that competes with reading.
 
 ## Metrics
 
