@@ -1,5 +1,11 @@
 import { Firecrawl } from '@mendable/firecrawl-js'
 import { cache } from './cache'
+import { createThrottle, isRateLimitError } from './throttle'
+
+// 10 req/min measured in validation; 7s leaves headroom for clock skew and
+// for other requests from the same deployment.
+const scrapeThrottle = createThrottle(7_000)
+const MAX_RETRIES = 2
 
 const SCRAPE_TIMEOUT_MS = 20_000
 const SCRAPE_CACHE_TTL_SECONDS = 60 * 60 // brand ad/news content doesn't need to be fresher than this for a demo tool
@@ -47,7 +53,7 @@ function buildNewsSearchUrl(brand: string): string {
  * brand); a failed scrape attempt is NOT cached, so a retry or fresh run
  * gets a real second attempt instead of a stale false negative.
  */
-async function scrapeMarkdown(url: string): Promise<string | null> {
+export async function scrapeMarkdown(url: string): Promise<string | null> {
   const cacheKey = `scrape:${url}`
   const cached = await cache.get(cacheKey)
   if (cached !== null) {
@@ -56,18 +62,31 @@ async function scrapeMarkdown(url: string): Promise<string | null> {
 
   const client = getFirecrawlClient()
   let markdown: string | undefined
-  try {
-    const doc = await client.scrape(url, {
-      formats: ['markdown'],
-      timeout: SCRAPE_TIMEOUT_MS,
-    })
-    markdown = doc.markdown
-  } catch (err) {
+  let lastError: unknown
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const doc = await scrapeThrottle(() =>
+        client.scrape(url, { formats: ['markdown'], timeout: SCRAPE_TIMEOUT_MS })
+      )
+      markdown = doc.markdown
+      lastError = undefined
+      break
+    } catch (err) {
+      lastError = err
+      if (!isRateLimitError(err) || attempt === MAX_RETRIES) break
+      // Exponential backoff on rate limiting specifically — other failures
+      // are not worth burning the request budget on.
+      await new Promise((r) => setTimeout(r, 5_000 * 2 ** attempt))
+    }
+  }
+
+  if (lastError !== undefined) {
     // Deliberately not cached: a transient failure (timeout, Firecrawl 5xx,
-    // network blip) is not the same fact as "this brand has no ads/coverage"
-    // and must not be locked in as that for an hour — the next attempt
-    // (retry or a fresh pipeline run) should genuinely hit Firecrawl again.
-    console.error(`Firecrawl scrape failed for ${url}:`, err instanceof Error ? err.message : err)
+    // rate limit, network blip) is not the same fact as "this brand has no
+    // ads/coverage" and must not be locked in as that for an hour — the next
+    // attempt should genuinely hit Firecrawl again.
+    console.error(`Firecrawl scrape failed for ${url}:`, lastError instanceof Error ? lastError.message : lastError)
     return null
   }
 
