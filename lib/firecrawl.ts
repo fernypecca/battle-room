@@ -53,8 +53,12 @@ function buildNewsSearchUrl(brand: string): string {
  * brand); a failed scrape attempt is NOT cached, so a retry or fresh run
  * gets a real second attempt instead of a stale false negative.
  */
-export async function scrapeMarkdown(url: string): Promise<string | null> {
-  const cacheKey = `scrape:${url}`
+export async function scrapeMarkdown(url: string, opts?: { maxChars?: number }): Promise<string | null> {
+  const maxChars = opts?.maxChars ?? MAX_MARKDOWN_CHARS
+  // The cap is part of the cache key because the cached value is already
+  // truncated to it — two callers requesting different sizes for the same
+  // URL must not read back a value truncated for the other's cap.
+  const cacheKey = `scrape:${maxChars}:${url}`
   const cached = await cache.get(cacheKey)
   if (cached !== null) {
     return cached.length > 0 ? cached : null
@@ -90,13 +94,13 @@ export async function scrapeMarkdown(url: string): Promise<string | null> {
     return null
   }
 
-  const trimmed = (markdown ?? '').trim().slice(0, MAX_MARKDOWN_CHARS)
+  const trimmed = (markdown ?? '').trim().slice(0, maxChars)
   await cache.set(cacheKey, trimmed, SCRAPE_CACHE_TTL_SECONDS)
   return trimmed.length > 0 ? trimmed : null
 }
 
 export async function scrapeAdLibrary(brand: string): Promise<string | null> {
-  return scrapeMarkdown(buildAdLibraryUrl(brand))
+  return scrapeMarkdown(buildAdLibraryUrl(brand), { maxChars: 150_000 })
 }
 
 export async function scrapeMediaCoverage(brand: string): Promise<string | null> {
