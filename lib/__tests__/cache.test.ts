@@ -1,7 +1,12 @@
-import { describe, it, expect } from 'vitest'
-import { MemoryCache } from '@/lib/cache'
+import { describe, it, expect, beforeEach } from 'vitest'
+import { MemoryCache, resetMemoryCache } from '@/lib/cache'
 
 describe('MemoryCache.incr', () => {
+  // State is shared across instances on purpose — Next gives route handlers
+  // and server components separate module graphs, so a per-instance Map made
+  // the teardown page 404 on data the API had just written.
+  beforeEach(resetMemoryCache)
+
   it('starts at 1', async () => {
     expect(await new MemoryCache().incr('k')).toBe(1)
   })

@@ -82,3 +82,46 @@ export async function askClaudeJson<T>(systemPrompt: string, userPrompt: string)
   const raw = await askClaude(systemPrompt, userPrompt)
   return extractJson<T>(raw)
 }
+
+/**
+ * Asks for a structured result via tool use, so the API guarantees valid
+ * JSON instead of us parsing prose and hoping.
+ *
+ * This exists because asking for JSON in the prompt failed intermittently in
+ * production: the synthesizer writes multi-line markdown bullets, and a model
+ * hand-writing JSON around them sometimes emits a raw newline inside a string
+ * and breaks the parse. The same run succeeded and failed on identical input.
+ * Downstream, that surfaced as a 502 in the synthesizer and — worse — as a
+ * silent "no data found" in collectors, which renders as a legitimate empty
+ * section. A whole class of intermittent failures disappears here.
+ */
+export async function askClaudeStructured<T>(
+  systemPrompt: string,
+  userPrompt: string,
+  tool: { name: string; description: string; input_schema: Record<string, unknown> }
+): Promise<T> {
+  const client = getAnthropicClient()
+  const model = process.env.ANTHROPIC_MODEL || DEFAULT_MODEL
+
+  const response = await client.messages.create({
+    model,
+    max_tokens: MAX_TOKENS,
+    system: systemPrompt,
+    messages: [{ role: 'user', content: userPrompt }],
+    tools: [tool as never],
+    tool_choice: { type: 'tool', name: tool.name },
+  })
+
+  if (response.stop_reason === 'max_tokens') {
+    throw new Error(
+      `Claude response hit the ${MAX_TOKENS}-token cap and was truncated. Raise MAX_TOKENS or send less input.`
+    )
+  }
+
+  const toolUse = response.content.find((block) => block.type === 'tool_use')
+  if (!toolUse || toolUse.type !== 'tool_use') {
+    throw new Error(`Claude did not call the ${tool.name} tool`)
+  }
+
+  return toolUse.input as T
+}

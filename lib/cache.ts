@@ -4,9 +4,32 @@ interface CacheStore {
   incr(key: string): Promise<number>
 }
 
+/**
+ * Next.js compiles route handlers and server components into separate module
+ * graphs, so a plain module-level Map gives each of them its OWN cache: a
+ * teardown written by POST /api/teardown was invisible to /teardown/[slug],
+ * which 404'd. Hanging the maps off globalThis — the standard Next pattern
+ * for dev singletons — makes local development actually work.
+ *
+ * This does not make MemoryCache production-viable. Serverless instances do
+ * not share a globalThis either, so a deploy without Upstash still cannot
+ * serve a teardown it generated. Upstash is required in production, not
+ * optional.
+ */
+const globalStore = globalThis as typeof globalThis & {
+  __teardownCache?: Map<string, { value: string; expiresAt: number }>
+  __teardownCounters?: Map<string, number>
+}
+
+/** Clears the shared dev store. Tests need it because state now outlives an instance. */
+export function resetMemoryCache(): void {
+  globalStore.__teardownCache?.clear()
+  globalStore.__teardownCounters?.clear()
+}
+
 export class MemoryCache implements CacheStore {
-  private store = new Map<string, { value: string; expiresAt: number }>()
-  private counters = new Map<string, number>()
+  private store = (globalStore.__teardownCache ??= new Map())
+  private counters = (globalStore.__teardownCounters ??= new Map())
 
   async get(key: string): Promise<string | null> {
     const entry = this.store.get(key)
