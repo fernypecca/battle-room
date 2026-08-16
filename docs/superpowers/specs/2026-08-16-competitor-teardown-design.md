@@ -35,6 +35,25 @@ Diagnosed from the existing code, in severity order:
 - No scraping of authenticated or private data — public pages only.
 - The rate limit is **not** being changed in this work (see Known limitations, carried forward).
 
+## Prior art — sibling tool
+
+A second version of this idea exists at `growth-agent-orchestrator.vercel.app` (built separately, with a different assistant). It runs five agents, takes much richer manual input (USPs, pain points, target role, company size, channels), adds an LLM self-review pass, and already ships markdown copy/download plus a counts dashboard.
+
+Worth borrowing:
+
+- **RSS instead of scraping for press.** Google News publishes RSS. That is more reliable and cheaper than putting Firecrawl on a search results page, and it removes one fragile scrape from the pipeline. Adopt for the `press` collector.
+- **Structured JSON outputs from the model.** Already proven working there, which de-risks the evidence contract.
+- **Markdown copy + `.md` download.** Reuse the interaction pattern rather than reinventing it.
+
+Deliberately *not* borrowed:
+
+- **Manual input of USPs and pain points.** It fixes the "doesn't know what you sell" problem by making the user type everything, which is real friction on cold traffic from Product Hunt. This design derives the same information from scraping the user's own URL. A manual override can be added later if scraping proves insufficient — it is not needed for launch.
+- **LLM self-review pass.** For citation integrity a code-level validator is strictly better: deterministic, free, and it cannot itself hallucinate. See the validator requirement below.
+
+### Citation validator
+
+After synthesis and before rendering or caching, a pure function checks that every `[id]` referenced in the output exists in the collected evidence set. Unknown ids are stripped and logged rather than rendered as dead links. This runs in code, not in the model, so the core promise of the product does not depend on the model policing itself.
+
 ## Architecture
 
 The core change: **separate collecting from reasoning.**
@@ -139,7 +158,9 @@ Author attribution is a feature here, not a footer line. Every shared teardown i
 
 The teardown page is the artifact that gets shared, so its design is a product requirement, not a finishing pass. It has to read as an expensive research report — the kind of page someone screenshots — not as a chat transcript with links.
 
-Existing tokens carry forward unchanged: neutral greys (`#ffffff` / `#f5f5f7` / `#1d1d1f` / `#6e6e73`), Alpine Green accent (`#1e3a2f`, accent text `#16291f`), SF on Apple platforms with Onest elsewhere, tokens as CSS variables mapped into Tailwind v4 `@theme inline`.
+Existing tokens carry forward unchanged, as they actually exist in `app/globals.css` — warm neutrals (`--background: #faf9f5`, `--paper: #ffffff`, `--surface: #f1efe6`, `--foreground: #17181a`), a saturated signal green (`--accent: #0ea968`, `--accent-text: #0a6b43`), and the dark hero band (`--hero-bg: #0a0f0c`) with its radial bloom and film grain. SF on Apple platforms with Onest elsewhere, tokens as CSS variables mapped into Tailwind v4 `@theme inline`.
+
+Note: the README currently documents a different, older palette (Alpine Green `#1e3a2f` over cold greys). The README is stale, `globals.css` is correct, and the README should be corrected as part of this work.
 
 New surfaces and their requirements:
 
