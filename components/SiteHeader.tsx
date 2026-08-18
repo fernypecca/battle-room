@@ -37,7 +37,7 @@ export function SiteHeader() {
             G
           </span>
           <span className="sm:hidden">GAO</span>
-          <span className="hidden sm:inline">Growth Agent Orchestrator</span>
+          <span className="hidden sm:inline">Competitor Teardown</span>
         </Link>
         <a
           href="https://github.com/fernypecca/v2-claude"

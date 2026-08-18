@@ -1,73 +1,70 @@
-import { AGENTS } from './agents'
-
-const USAGE_STEPS = [
+const SOURCES = [
   {
-    label: 'Tell it who you are',
-    detail: 'Your brand and the competitor you want to go up against.',
+    label: 'Their site and pricing',
+    detail: 'What they sell, who they say it is for, and what they actually charge — in their own words.',
   },
   {
-    label: 'Tell it who you’re selling to',
-    detail: 'A short description of the buyer persona — role, company type, whatever you’d tell a new rep.',
+    label: 'Their customers',
+    detail:
+      'Verbatim praise and complaints from review sites. The most useful material in the report, and the hardest to get anywhere else.',
   },
   {
-    label: 'Watch it work',
-    detail: 'The four agents below run one after another, live — each card fills in as its agent finishes.',
+    label: 'Their live ads',
+    detail: 'The hooks and offers running right now, straight from the ad library.',
+  },
+  {
+    label: 'Their press',
+    detail: 'Funding, launches, controversy — what a prospect may already have read about them.',
   },
 ]
 
 export function HowItWorks() {
   return (
-    <section className="flex flex-col gap-14">
-      <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
-        <p className="flex items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.08em] text-[var(--accent-text)]">
-          <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />
-          How it works
+    <div className="flex flex-col gap-14">
+      <div className="max-w-2xl">
+        <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--accent-text)]">
+          What it reads
         </p>
-        <h2 className="text-[28px] font-semibold leading-tight tracking-[-0.02em] text-[var(--foreground)] sm:text-[36px]">
-          Four agents, one pipeline
+        <h2 className="mt-3 text-[30px] font-semibold leading-[1.15] tracking-[-0.02em] text-[var(--foreground)] sm:text-[36px]">
+          Four sources, one report
         </h2>
-        <p className="text-[16px] leading-relaxed text-[var(--muted)]">
-          Enter a competitor once. Four Claude agents run in sequence — each one reads real, live data and
-          hands its output to the next — until you have a full competitive kit.
+        <p className="mt-4 text-[16.5px] leading-relaxed text-[var(--muted)]">
+          Each source is read on its own and returns only verbatim quotes. Nothing is summarized before it
+          reaches the report, so nothing gets embellished on the way.
         </p>
       </div>
 
-      <ol className="grid gap-4 sm:grid-cols-2">
-        {AGENTS.map((agent, i) => (
-          <li
-            key={agent.title}
-            className="flex gap-4 rounded-[24px] border border-[var(--border-soft)] bg-[var(--paper)] p-6 shadow-[var(--shadow-sm)]"
-          >
-            <div className="flex shrink-0 flex-col items-center gap-2">
-              <div className="flex h-11 w-11 items-center justify-center rounded-[14px] bg-[var(--accent-tint)] text-[var(--accent-text)]">
-                {agent.icon}
-              </div>
-              <span className="text-[11px] font-semibold text-[var(--muted-2)]">{`0${i + 1}`}</span>
+      <ul className="grid gap-x-10 gap-y-9 sm:grid-cols-2">
+        {SOURCES.map((source, i) => (
+          <li key={source.label}>
+            <div className="flex items-baseline gap-3">
+              <span className="text-[12px] font-semibold tabular-nums text-[var(--muted-2)]">
+                {String(i + 1).padStart(2, '0')}
+              </span>
+              <h3 className="text-[17px] font-semibold text-[var(--foreground)]">{source.label}</h3>
             </div>
-            <div className="flex flex-col gap-1.5">
-              <p className="text-[16px] font-semibold text-[var(--foreground)]">{agent.title}</p>
-              <p className="text-[14px] leading-relaxed text-[var(--muted)]">{agent.detail}</p>
-            </div>
+            <p className="mt-2 pl-8 text-[15px] leading-relaxed text-[var(--muted)]">{source.detail}</p>
           </li>
         ))}
-      </ol>
+      </ul>
 
-      <div className="rounded-[28px] border border-[var(--border-soft)] bg-[var(--surface)]/60 p-6 sm:p-8">
-        <p className="mb-6 text-[13px] font-semibold uppercase tracking-[0.08em] text-[var(--muted)]">
-          Using it takes three steps
+      <div className="max-w-2xl border-t border-[var(--border-soft)] pt-10">
+        <h2 className="text-[30px] font-semibold leading-[1.15] tracking-[-0.02em] text-[var(--foreground)] sm:text-[36px]">
+          Why you can trust it
+        </h2>
+        <p className="mt-4 text-[16.5px] leading-relaxed text-[var(--muted)]">
+          Every claim in the report ends with a marker like{' '}
+          <span className="rounded-[5px] bg-[var(--accent-tint)] px-[5px] py-[1px] align-super text-[10px] font-semibold text-[var(--accent-text)]">
+            rev-3
+          </span>
+          . Tap it and you see the exact sentence it came from, and the page it was taken from.
         </p>
-        <div className="grid gap-6 sm:grid-cols-3">
-          {USAGE_STEPS.map((step, i) => (
-            <div key={step.label} className="flex flex-col gap-2">
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--accent)] text-[12px] font-semibold text-white">
-                {i + 1}
-              </span>
-              <p className="text-[15px] font-semibold text-[var(--foreground)]">{step.label}</p>
-              <p className="text-[13.5px] leading-relaxed text-[var(--muted)]">{step.detail}</p>
-            </div>
-          ))}
-        </div>
+        <p className="mt-4 text-[16.5px] leading-relaxed text-[var(--muted)]">
+          That is enforced in code, not asked for in a prompt. A claim with no source is removed before you
+          ever see it. And when a source has nothing to say, the section stays empty instead of being filled
+          with something plausible.
+        </p>
       </div>
-    </section>
+    </div>
   )
 }

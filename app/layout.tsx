@@ -10,9 +10,10 @@ const onest = Onest({
 });
 
 export const metadata: Metadata = {
-  title: "Growth Agent Orchestrator — AI Agent Orchestration Demo",
+  title: "Competitor Teardown",
   description:
-    "Four AI agents that scrape a competitor's live ads, draft a battlecard, summarize their media coverage, and write an outbound sequence — live, in sequence.",
+    "Paste a competitor's URL and get what they sell, what they charge, what their customers complain about, and where they are exposed — every claim linked to the source it came from.",
+  authors: [{ name: "Fernando Peccatiello" }],
 };
 
 export default function RootLayout({
