@@ -52,6 +52,16 @@ export class MemoryCache implements CacheStore {
   }
 }
 
+/**
+ * Vercel's Upstash integration injects KV_REST_API_URL / KV_REST_API_TOKEN,
+ * while a database created directly at upstash.com gives the UPSTASH_ names.
+ * Accept both so the store works whichever way it was provisioned — getting
+ * this wrong is silent: the app just falls back to the in-memory cache and
+ * every teardown page 404s in production.
+ */
+const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL
+const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN
+
 class UpstashCache implements CacheStore {
   private redisPromise: Promise<import('@upstash/redis').Redis>
 
@@ -59,8 +69,8 @@ class UpstashCache implements CacheStore {
     this.redisPromise = import('@upstash/redis').then(
       ({ Redis }) =>
         new Redis({
-          url: process.env.UPSTASH_REDIS_REST_URL!,
-          token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+          url: REDIS_URL!,
+          token: REDIS_TOKEN!,
         })
     )
   }
@@ -82,8 +92,16 @@ class UpstashCache implements CacheStore {
   }
 }
 
-const hasUpstash = Boolean(
-  process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
-)
+const hasUpstash = Boolean(REDIS_URL && REDIS_TOKEN)
+
+if (!hasUpstash && process.env.NODE_ENV === 'production') {
+  // Loud on purpose. Without Redis the app still boots and still generates
+  // teardowns — they just vanish, and every public teardown page 404s. That
+  // reads as a routing bug rather than missing configuration.
+  console.warn(
+    'No Redis configured. Teardowns will not survive a serverless invocation and /teardown/[slug] will 404. ' +
+      'Set KV_REST_API_URL and KV_REST_API_TOKEN (Vercel Upstash integration) or the UPSTASH_REDIS_REST_* equivalents.'
+  )
+}
 
 export const cache: CacheStore = hasUpstash ? new UpstashCache() : new MemoryCache()
