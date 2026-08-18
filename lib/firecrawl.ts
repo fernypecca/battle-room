@@ -1,6 +1,7 @@
 import { Firecrawl } from '@mendable/firecrawl-js'
 import { cache } from './cache'
 import { createThrottle, isRateLimitError } from './throttle'
+import { tryOrpheus } from './orpheus'
 
 // 10 req/min measured in validation; 7s leaves headroom for clock skew and
 // for other requests from the same deployment.
@@ -64,6 +65,19 @@ export async function scrapeMarkdown(url: string, opts?: { maxChars?: number }):
     return cached.length > 0 ? cached : null
   }
 
+  // Tier 1: Orpheus, the self-hosted scraper — free, and not subject to the
+  // Firecrawl rate cap. It handles ordinary company sites but is turned away
+  // by G2 (Cloudflare) and Trustpilot (robots.txt), so review sources still
+  // reach Firecrawl below. Null here is the ordinary path, not a failure.
+  const viaOrpheus = await tryOrpheus(url, maxChars)
+  if (viaOrpheus) {
+    const trimmed = viaOrpheus.slice(0, maxChars)
+    await cache.set(cacheKey, trimmed, SCRAPE_CACHE_TTL_SECONDS)
+    return trimmed
+  }
+
+  // Tier 2: Firecrawl. Paid per page and capped at 10 req/min, hence the
+  // throttle and the rate-limit retry.
   const client = getFirecrawlClient()
   let markdown: string | undefined
   let lastError: unknown
