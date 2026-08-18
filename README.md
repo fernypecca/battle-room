@@ -213,8 +213,6 @@ lib/
   getClientIp.ts                → x-forwarded-for extraction
 ```
 
-Not shown: `app/api/agents/battlecard` and `app/api/agents/outbound`, plus a handful of
-`components/` files (`AgentCard.tsx`, `PipelineForm.tsx`, `PipelineRunner.tsx`, `agents.tsx`) —
 leftover routes and components from the previous four-agent-chain version of this product. Nothing
 in the current app imports them, but they still build and ship. Dead code, not yet cleaned up.
 
